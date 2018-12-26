@@ -8,7 +8,7 @@ for a standard normal random variable and its inverse
 
 double NormalDensity(double x);
 
-double CummulativeNormal(double x);
+double CumulativeNormal(double x);
 
 double InverseCumulativeNormal(double x);
 

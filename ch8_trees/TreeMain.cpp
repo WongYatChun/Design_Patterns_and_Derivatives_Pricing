@@ -13,12 +13,13 @@ Require source files:
     TreeProducts.cpp
  */
 
-#include "AntiThetic.h"
-#include "ConvergenceTable.h"
-#include "ExoticBSEngine.h"
-#include "MCStatistics.h"
-#include "ParkMiller.h"
-#include "PathDependentAsian.h"
+
+#include "BinomialTree.h"
+#include "BlackScholesFormulas.h"
+#include "PayOffForward.h"
+#include "TreeAmerican.h"
+#include "TreeEuropean.h"
+#include <cmath>
 #include <iostream>
 
 using namespace std;
@@ -31,8 +32,7 @@ int main(int argc, char const *argv[])
     double Vol;
     double r;
     double d;
-    double NumberOfDates;
-    unsigned long NumberOfPaths;
+    unsigned long Steps;
 
     cout << "\nEnter expiry\n";
     cin >> Expiry;
@@ -52,42 +52,55 @@ int main(int argc, char const *argv[])
     cout << "\nEnter d\n";
     cin >> d;
 
-    cout << "\nEnter Number Of Dates\n";
-    cin >> NumberOfDates;
+    cout << "\nEnter Number Of Steps\n";
+    cin >> Steps;
 
-    cout << "\nEnter Number Of Paths\n";
-    cin >> NumberOfPaths;
+    PayOffCall thePayOff(Strike);
 
-    MJArray times(NumberOfDates);
-
-    for(unsigned long i = 0; i < NumberOfDates; i++){
-        times[i] = (i + 1.0) * Expiry / NumberOfDates;
-    }
-
-    ParametersConstant VolParam(Vol);
     ParametersConstant rParam(r);
     ParametersConstant dParam(d);
-    /* Option type */
-    PayOffCall thePayOff(Strike);
-    PathDependentAsian theOption(times, Expiry, thePayOff);
-    /* Statistic gatherer */
-    StatisticsMean gatherer;
-    ConvergenceTable gathererTwo(gatherer);
-    /* Random number generator */
-    RandomParkMiller generator(NumberOfDates);
-    AntiThetic GenTwo(generator);
+    
+    TreeEuropean europeanOption(Expiry, thePayOff);
+    TreeAmerican americanOption(Expiry, thePayOff);
 
-    ExoticBSEngine theEngine(theOption, rParam, dParam, VolParam, GenTwo, Spot);
-    theEngine.DoSimulation(gathererTwo, NumberOfPaths);
+    SimpleBinomialTree theTree(Spot, rParam, dParam, Vol, Steps, Expiry);
 
-    vector<vector<double>> results = gathererTwo.GetResultsSoFar();
+    double euroPrice = theTree.GetThePrice(europeanOption);
+    double americanPrice = theTree.GetThePrice(americanOption);
 
-    cout << "\nFor the Asian call price the results are\n";
+    cout << "euro price: " << euroPrice << " amer price: " << americanPrice << endl;
 
-    for (unsigned long i = 0; i < results.size(); i++){
-        for (unsigned long j = 0; j < results[i].size(); j++)
-            cout << results[i][j] << " " ;
-        cout << "\n";
-    }    
+    double BSPrice = BlackScholesCall(Spot, Strike, r, d, Vol, Expiry);
+
+    cout << "BS formula euro price: " << BSPrice << endl;
+
+    PayOffForward forwardPayOff(Strike);
+    TreeEuropean forward(Expiry, forwardPayOff);
+
+    double forwardPrice = theTree.GetThePrice(forward);
+    cout << "forward price by tree: " << forwardPrice << endl;
+
+    double actualForwardPrice = exp(-r * Expiry) * (Spot * exp((r - d) * Expiry) - Strike);
+    cout << "forward price: " << actualForwardPrice << endl;
+
+    Steps++;
+    SimpleBinomialTree theNewTree(Spot, rParam, dParam, Vol, Steps, Expiry);
+
+    double euroNewPrice = theNewTree.GetThePrice(europeanOption);
+    double americanNewPrice = theNewTree.GetThePrice(americanOption);
+
+    cout << "euro new price: " << euroNewPrice << " amer new price: " << americanNewPrice << endl;
+
+    double forwardNewPrice = theNewTree.GetThePrice(forward);
+    cout << "forward price by new tree: " << forwardNewPrice << endl;
+
+    double averageEuro = 0.5 * (euroPrice + euroNewPrice);
+    double averageAmer = 0.5 * (americanPrice + americanNewPrice);
+    double averageForward = 0.5 * (forwardPrice + forwardNewPrice);
+
+    cout << "euro average price: " << averageEuro << endl;
+    cout << "amer average price: " << averageAmer << endl;
+    cout << "average forward price: " << averageForward << endl;
+
     return 0;
 }

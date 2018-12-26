@@ -1,7 +1,7 @@
 #include "BinomialTree.h"
 #include "Arrays.h"
 #include <cmath>
-
+#include <iostream>
 // The basic math functions should be in namespace std but are not in VCPP6
 
 SimpleBinomialTree::SimpleBinomialTree(double Spot_,
@@ -51,14 +51,15 @@ double SimpleBinomialTree::GetThePrice(const TreeProduct& TheProduct){
     
     for (unsigned long i = 1; i < Steps + 1; i++){
         unsigned long index = Steps - i;
-        double ThisTime = index * index * Time / Steps;
+        double ThisTime = index * Time / Steps;
         for (long j = - static_cast<long>(index), k = 0;
             j < static_cast<long>(index) + 1; j = j + 2, k++){
                 double Spot = TheTree[index][k].first;
                 double futureDiscountedValue = 0.5 * Discounts[index] * \
                                                 (TheTree[index + 1][k].second + TheTree[index + 1][k + 1].second);
                 TheTree[index][k].second = TheProduct.PreFinalValue(Spot, ThisTime, futureDiscountedValue);
+                // std::cout << TheTree[index][k].second << std::endl; //debug
             }
-        return TheTree[0][0].second;
     }
+    return TheTree[0][0].second;
 }
